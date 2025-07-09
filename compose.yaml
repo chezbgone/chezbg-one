@@ -1,0 +1,30 @@
+services:
+  caddy-proxy:
+    build: .
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - CADDY_INGRESS_NETWORKS=caddy
+    networks:
+      - caddy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
+    restart: unless-stopped
+    deploy:
+      labels:
+        caddy.encode: gzip zstd
+        caddy.header.Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+        caddy.header.X-Frame-Options: "DENY"
+        caddy.header.X-XSS-Protection: "1; mode=block"
+        caddy.header.X-Content-Type-Options: "nosniff"
+        caddy.header.Referrer-Policy: "strict-origin-when-cross-origin"
+
+networks:
+  caddy:
+    external: true
+    name: caddy
+
+volumes:
+  caddy_data: {}
