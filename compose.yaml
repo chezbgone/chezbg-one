@@ -1,25 +1,33 @@
 services:
   caddy-proxy:
     build: .
+    restart: unless-stopped
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"          # HTTP/3
     environment:
       - CADDY_INGRESS_NETWORKS=caddy
     networks:
       - caddy
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - caddy_data:/data
-    restart: unless-stopped
-    deploy:
-      labels:
-        caddy.encode: gzip zstd
-        caddy.header.Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
-        caddy.header.X-Frame-Options: "DENY"
-        caddy.header.X-XSS-Protection: "1; mode=block"
-        caddy.header.X-Content-Type-Options: "nosniff"
-        caddy.header.Referrer-Policy: "strict-origin-when-cross-origin"
+      - caddy_config:/config
+    labels:
+      # --- Global options (these ARE valid at global scope) ---
+      caddy.email: ${ACME_EMAIL}         # set in .env (gitignored), not committed
+
+      # --- Shared snippet imported by every site ---
+      # Site directives like `encode` and `header` are NOT valid as global
+      # options and do not inherit across sites, so they live in a snippet
+      # that each project imports via `caddy.import: common`.
+      caddy_0: (common)
+      caddy_0.encode: gzip zstd
+      caddy_0.header.Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+      caddy_0.header.X-Content-Type-Options: nosniff
+      caddy_0.header.X-Frame-Options: DENY
+      caddy_0.header.Referrer-Policy: strict-origin-when-cross-origin
 
 networks:
   caddy:
@@ -28,3 +36,4 @@ networks:
 
 volumes:
   caddy_data: {}
+  caddy_config: {}

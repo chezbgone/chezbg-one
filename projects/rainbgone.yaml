@@ -1,0 +1,20 @@
+# Production deployment overlay for rainbgone.
+# rainbgone's SvelteKit server (adapter-node) already proxies /api -> backend
+# internally, so only the frontend is exposed. The backend stays on the
+# `appnet` network, unreachable from outside.
+#
+# NOTE: setting `networks:` on a service REPLACES its network list, so we
+# must re-list `appnet` here or the frontend loses its path to the backend.
+services:
+  frontend:
+    networks: [appnet, caddy]
+    labels:
+      caddy: ${DOMAIN}
+      caddy.import: common
+      caddy.tls.dns: cloudflare ${CLOUDFLARE_API_KEY}
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+
+networks:
+  caddy:
+    external: true
+    name: caddy
