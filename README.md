@@ -8,6 +8,7 @@ stays deployment-agnostic; this repo owns hostnames, TLS, and routing.
 
     compose.yaml            # the shared Caddy proxy (caddy-docker-proxy)
     Dockerfile              # builds Caddy w/ cloudflare DNS + docker-proxy plugins
+    .github/workflows/      # CI builds the proxy image (arm64) + pushes to GHCR
     .env                    # CLOUDFLARE_API_KEY + ACME_EMAIL (gitignored; copy from .env.example)
     Makefile                # one target per project
     projects/
@@ -48,3 +49,14 @@ The app repos are expected as siblings of this one (`../vodder-view`,
 
 Distinct subdomains are the only thing you have to keep unique now — no host
 ports are published by any project, so they never collide.
+
+## Proxy image
+
+The Caddy proxy is **not** built on the host — compiling it with `xcaddy`
+exhausts a nano instance's memory. Instead, GitHub Actions builds it natively on
+an arm64 runner and pushes to `ghcr.io/chezbgone/chezbg-one:latest`
+(public package). `make proxy` just pulls and runs it.
+
+Edits to the `Dockerfile` rebuild and republish automatically on push to `main`;
+trigger a manual rebuild from the Actions tab (`workflow_dispatch`). To pick up a
+new image on the host: `make proxy`.

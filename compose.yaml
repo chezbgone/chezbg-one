@@ -1,6 +1,6 @@
 services:
   caddy-proxy:
-    build: .
+    image: ghcr.io/chezbgone/chezbg-one:latest
     restart: unless-stopped
     ports:
       - "80:80"
