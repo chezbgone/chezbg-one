@@ -23,4 +23,4 @@ rainbgone:
 	  -f $(APPS)/rainbgone/compose.prod.yaml \
 	  -f projects/rainbgone.yaml \
 	  --env-file .env --env-file projects/rainbgone.env \
-	  -p rainbgone up -d --build
+	  -p rainbgone up -d --pull always
