@@ -87,6 +87,9 @@ exhausts a nano instance's memory. Instead, GitHub Actions builds it natively on
 an arm64 runner and pushes to `ghcr.io/chezbgone/chezbg-one:latest`
 (public package). `make proxy` just pulls and runs it.
 
+Caddy and both plugins are pinned to explicit versions in the `Dockerfile`.
+Review and update those versions together when upgrading the proxy.
+
 Edits to the `Dockerfile` rebuild and republish automatically on push to `main`;
 trigger a manual rebuild from the Actions tab (`workflow_dispatch`). To pick up a
 new image on the host: `make proxy`.
