@@ -93,3 +93,8 @@ Review and update those versions together when upgrading the proxy.
 Edits to the `Dockerfile` rebuild and republish automatically on push to `main`;
 trigger a manual rebuild from the Actions tab (`workflow_dispatch`). To pick up a
 new image on the host: `make proxy`.
+
+CI checks the deployment configuration before building. Concurrent runs on the
+same ref cancel older runs. Images are first published with their commit SHA;
+only a build that still matches the head of `main` is promoted to `latest`.
+Pull requests run validation without publishing images.
