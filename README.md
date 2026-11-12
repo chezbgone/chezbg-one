@@ -12,13 +12,11 @@ stays deployment-agnostic; this repo owns hostnames, TLS, and routing.
     .env                    # CLOUDFLARE_API_KEY + ACME_EMAIL (gitignored; copy from .env.example)
     Makefile                # one target per project
     projects/
-      vodder-view.yaml      # deployment overlay (host, TLS, routing)
-      vodder-view.env       # DOMAIN=...
-      rainbgone.yaml
-      rainbgone.env
+      rainbgone.yaml        # deployment overlay (host, TLS, routing)
+      rainbgone.env         # DOMAIN=...
 
-The app repos are expected as siblings of this one (`../vodder-view`,
-`../rainbgone`); override with `make <target> APPS=/path/to/apps`.
+The rainbgone app repo is expected as a sibling of this one (`../rainbgone`);
+override with `make rainbgone APPS=/path/to/apps`.
 
 ## One-time setup
 
@@ -35,8 +33,7 @@ The app repos are expected as siblings of this one (`../vodder-view`,
 ## Usage
 
     make proxy          # create the `caddy` network + start the proxy (idempotent)
-    make vodder-view    # build + deploy vodder-view
-    make rainbgone      # build + deploy rainbgone
+    make rainbgone      # pull the latest app images + deploy rainbgone
 
 Start or update the proxy before deploying apps. The Cloudflare token is passed
 only to Caddy's environment; app labels use the literal runtime placeholder
@@ -90,7 +87,7 @@ an arm64 runner and pushes to `ghcr.io/chezbgone/chezbg-one:latest`
 Caddy and both plugins are pinned to explicit versions in the `Dockerfile`.
 Review and update those versions together when upgrading the proxy.
 
-Edits to the `Dockerfile` rebuild and republish automatically on push to `main`;
+Every push to `main` checks, builds, and publishes the proxy image;
 trigger a manual rebuild from the Actions tab (`workflow_dispatch`). To pick up a
 new image on the host: `make proxy`.
 
