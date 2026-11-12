@@ -17,10 +17,11 @@ proxy:
 
 # Each app target layers the app's clean prod base (FIRST, so relative
 # build paths resolve against the app repo) with this repo's overlay,
-# and injects the global secret (.env) + per-project domain (projects/*.env).
+# and injects the per-project domain (projects/*.env). Only the shared proxy
+# needs the global secret in .env.
 rainbgone:
 	docker compose \
 	  -f $(APPS)/rainbgone/compose.prod.yaml \
 	  -f projects/rainbgone.yaml \
-	  --env-file .env --env-file projects/rainbgone.env \
+	  --env-file projects/rainbgone.env \
 	  -p rainbgone up -d --pull always

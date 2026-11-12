@@ -11,7 +11,9 @@ services:
     labels:
       caddy: ${DOMAIN}
       caddy.import: common
-      caddy.tls.dns: cloudflare ${CLOUDFLARE_API_KEY}
+      # Caddy resolves this at runtime from its own environment. Keep the
+      # token out of application labels and generated Caddy configuration.
+      caddy.tls.dns: cloudflare {env.CLOUDFLARE_API_KEY}
       caddy.reverse_proxy: "{{upstreams 3000}}"
 
 networks:

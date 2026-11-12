@@ -38,13 +38,21 @@ The app repos are expected as siblings of this one (`../vodder-view`,
     make vodder-view    # build + deploy vodder-view
     make rainbgone      # build + deploy rainbgone
 
+Start or update the proxy before deploying apps. The Cloudflare token is passed
+only to Caddy's environment; app labels use the literal runtime placeholder
+`cloudflare {env.CLOUDFLARE_API_KEY}`. After changing the token in `.env`, run
+`make proxy` to recreate Caddy with the new value. App deployment commands load
+only their per-project domain file.
+
 ## Adding a project
 
 1. In the app repo, add a clean `compose.prod.yaml` (build + run only — no host
    ports, no Caddy labels, no domain).
 2. Here, add `projects/<name>.yaml` (overlay) and `projects/<name>.env` (DOMAIN).
    In the overlay, expose only the public-facing service: put it on the `caddy`
-   network, `caddy.import: common`, set `caddy.tls.dns` and `caddy.reverse_proxy`.
+   network, `caddy.import: common`, `caddy.tls.dns: cloudflare {env.CLOUDFLARE_API_KEY}`,
+   and `caddy.reverse_proxy`. Keep the runtime placeholder literal so the token
+   stays out of application labels.
    If a service also needs to reach siblings, re-list its private (`appnet`) network too
    (setting `networks:` replaces, not appends).
 3. Add a `make <name>` target mirroring the others.
