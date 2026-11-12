@@ -24,8 +24,10 @@ The app repos are expected as siblings of this one (`../vodder-view`,
 
 1. `cp .env.example .env`, then fill in both values (the file is gitignored, so
    neither lands in the repo):
-   - `CLOUDFLARE_API_KEY` — a Cloudflare API **token** (Zone:DNS:Edit on the
-     chezbg.one zone), shared by every project's DNS-01 challenge.
+   - `CLOUDFLARE_API_KEY` — a Cloudflare API **token** with both **Zone → DNS → Edit**
+     and **Zone → Zone → Read**, scoped to the `chezbg.one` zone. The DNS provider
+     needs zone read access to find the zone before creating challenge records.
+     This token is shared by every project's DNS-01 challenge.
    - `ACME_EMAIL` — your Let's Encrypt contact address for renewal-failure notices.
 2. Point DNS at the host's Elastic IP — a wildcard is simplest:
    `*.chezbg.one  A  <elastic-ip>` (set it DNS-only / grey-cloud, not proxied).
