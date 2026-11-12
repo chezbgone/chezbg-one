@@ -6,7 +6,7 @@ stays deployment-agnostic; this repo owns hostnames, TLS, and routing.
 
 ## Layout
 
-    compose.yaml            # the shared Caddy proxy (caddy-docker-proxy)
+    compose.yaml            # shared Caddy proxy + restricted Docker socket proxy
     Dockerfile              # builds Caddy w/ cloudflare DNS + docker-proxy plugins
     .github/workflows/      # CI builds the proxy image (arm64) + pushes to GHCR
     .env                    # CLOUDFLARE_API_KEY + ACME_EMAIL (gitignored; copy from .env.example)
@@ -49,6 +49,22 @@ The app repos are expected as siblings of this one (`../vodder-view`,
 
 Distinct subdomains are the only thing you have to keep unique now — no host
 ports are published by any project, so they never collide.
+
+## Docker API access
+
+Caddy discovers containers through `docker-socket-proxy`, which allows only
+read requests for containers, networks, events, daemon information, ping, and
+version negotiation. Docker API writes and other endpoint groups are denied.
+Only the socket proxy mounts the host Docker socket. Its API is on a private,
+internal network shared with Caddy, with no published port or application access.
+This configuration supports standalone Docker Compose, rather than Docker Swarm.
+
+Run the configuration regression checks with Docker Compose installed; the
+checks use temporary files and dummy credentials and do not require a daemon:
+
+    python3 -m unittest discover -s tests -v
+
+Set `COMPOSE_COMMAND=/path/to/docker-compose` to use a standalone Compose CLI.
 
 ## Proxy image
 

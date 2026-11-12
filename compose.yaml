@@ -8,10 +8,14 @@ services:
       - "443:443/udp"          # HTTP/3
     environment:
       - CADDY_INGRESS_NETWORKS=caddy
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    depends_on:
+      docker-socket-proxy:
+        condition: service_healthy
     networks:
       - caddy
+      - docker-api
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - caddy_data:/data
       - caddy_config:/config
     labels:
@@ -29,7 +33,35 @@ services:
       caddy_0.header.X-Frame-Options: DENY
       caddy_0.header.Referrer-Policy: strict-origin-when-cross-origin
 
+  # Only this service can access the host socket. Caddy gets read-only
+  # discovery API access over a private network; application containers
+  # cannot reach this API, and no API port is published on the host.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.5.0
+    restart: unless-stopped
+    environment:
+      BIND_CONFIG: "0.0.0.0:2375"
+      CONTAINERS: "1"
+      EVENTS: "1"
+      INFO: "1"
+      NETWORKS: "1"
+      PING: "1"
+      VERSION: "1"
+      POST: "0"
+    networks:
+      - docker-api
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2375/_ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+
 networks:
+  docker-api:
+    internal: true
   caddy:
     external: true
     name: caddy
