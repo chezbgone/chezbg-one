@@ -11,6 +11,7 @@ APPS ?= ..
 # Image is built in CI and pulled from GHCR (see .github/workflows/build.yml),
 # so the host never compiles Caddy locally.
 proxy:
+	docker compose config --quiet
 	docker network create --ipv6 caddy 2>/dev/null || true
 	docker compose pull
 	docker compose up -d

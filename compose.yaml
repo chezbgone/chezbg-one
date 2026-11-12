@@ -9,7 +9,7 @@ services:
     environment:
       - CADDY_INGRESS_NETWORKS=caddy
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
-      - CLOUDFLARE_API_KEY=${CLOUDFLARE_API_KEY}
+      - CLOUDFLARE_API_KEY=${CLOUDFLARE_API_KEY:?Set CLOUDFLARE_API_KEY in .env}
     depends_on:
       docker-socket-proxy:
         condition: service_healthy
@@ -21,7 +21,7 @@ services:
       - caddy_config:/config
     labels:
       # --- Global options (these ARE valid at global scope) ---
-      caddy.email: ${ACME_EMAIL}         # set in .env (gitignored), not committed
+      caddy.email: ${ACME_EMAIL:?Set ACME_EMAIL in .env}
 
       # --- Shared snippet imported by every site ---
       # Site directives like `encode` and `header` are NOT valid as global

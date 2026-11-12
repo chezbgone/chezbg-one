@@ -43,6 +43,8 @@ only to Caddy's environment; app labels use the literal runtime placeholder
 `cloudflare {env.CLOUDFLARE_API_KEY}`. After changing the token in `.env`, run
 `make proxy` to recreate Caddy with the new value. App deployment commands load
 only their per-project domain file.
+Compose rejects missing or empty proxy credentials, contact email, or app domain
+before starting services. `make proxy` also validates before creating its network.
 
 ## Adding a project
 
@@ -56,6 +58,8 @@ only their per-project domain file.
    If a service also needs to reach siblings, re-list its private (`appnet`) network too
    (setting `networks:` replaces, not appends).
 3. Add a `make <name>` target mirroring the others.
+   Use `${DOMAIN:?Set DOMAIN in the project environment file}` for the hostname
+   label so an unset or empty domain fails before deployment.
 
 Distinct subdomains are the only thing you have to keep unique now — no host
 ports are published by any project, so they never collide.

@@ -9,7 +9,7 @@ services:
   frontend:
     networks: [appnet, caddy]
     labels:
-      caddy: ${DOMAIN}
+      caddy: ${DOMAIN:?Set DOMAIN in projects/rainbgone.env}
       caddy.import: common
       # Caddy resolves this at runtime from its own environment. Keep the
       # token out of application labels and generated Caddy configuration.

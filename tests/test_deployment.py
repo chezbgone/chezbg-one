@@ -102,6 +102,31 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(set(frontend["networks"]), {"appnet", "caddy"})
         self.assertEqual(set(app["services"]["backend"]["networks"]), {"appnet"})
 
+    def test_missing_proxy_settings_are_rejected(self):
+        valid = self.values.copy()
+        for key in ("ACME_EMAIL", "CLOUDFLARE_API_KEY"):
+            for value in (None, ""):
+                with self.subTest(setting=key, value=value):
+                    self.values = valid.copy()
+                    if value is None:
+                        del self.values[key]
+                    else:
+                        self.values[key] = value
+                    result = self.compose()
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(key, result.stderr)
+
+    def test_missing_application_domain_is_rejected(self):
+        for value in (None, ""):
+            with self.subTest(value=value):
+                if value is None:
+                    del self.values["DOMAIN"]
+                else:
+                    self.values["DOMAIN"] = value
+                result = self.compose(("app.yaml", "projects/rainbgone.yaml"))
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("DOMAIN", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
