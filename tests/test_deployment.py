@@ -68,9 +68,12 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(set(backend["networks"]), {"appnet"})
         self.assertEqual(backend["networks"]["appnet"]["aliases"], ["vodderview-backend"])
         self.assertEqual(frontend["networks"]["caddy"]["aliases"], ["vodder-view-frontend"])
-        self.assertIn("reverse_proxy vodder-view-frontend:80", (ROOT / "caddy/Caddyfile").read_text())
+        self.assertRegex(
+            (ROOT / "caddy/Caddyfile").read_text(),
+            r"(?m)^vods\.chezbg\.one \{[^}]*\breverse_proxy vodder-view-frontend:80$",
+        )
         self.assertIn("/api/health", frontend["healthcheck"]["test"][-1])
-        self.assertEqual(backend["environment"]["ADMIN_ORIGIN"], "https://vodder-view.chezbg.one")
+        self.assertEqual(backend["environment"]["ADMIN_ORIGIN"], "https://vods.chezbg.one")
         self.assertEqual(backend["environment"]["DATABASE_PATH"], "/data/vodder-view.sqlite")
 
         mounts = {volume["target"]: volume for volume in backend["volumes"]}

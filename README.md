@@ -22,7 +22,7 @@ The successful run's summary gives the deploy command.
 
 ## Set up the server
 
-- Point the app's hostname (`rainbgone.chezbg.one` or `vodder-view.chezbg.one`),
+- Point the app's hostname (`rainbgone.chezbg.one` or `vods.chezbg.one`),
   or a wildcard DNS record, at the server's public address. Allow inbound TCP
   80 and 443 so Caddy can obtain certificates.
   UDP 443 is optional for HTTP/3.

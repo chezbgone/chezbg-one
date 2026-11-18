@@ -19,5 +19,5 @@ vodder-view:
 	test -f secrets/vodder-view.env || (echo 'Create secrets/vodder-view.env from its example.' >&2; exit 1)
 	docker compose -f projects/vodder-view/compose.yaml pull
 	docker compose -f projects/vodder-view/compose.yaml up --pull never --wait --wait-timeout 60
-	curl --fail --silent --show-error --output /dev/null --retry 8 --retry-all-errors --retry-delay 3 --max-time 8 https://vodder-view.chezbg.one/
-	curl --fail --silent --show-error --max-time 8 https://vodder-view.chezbg.one/api/health | grep -Fq 'Server is running'
+	curl --fail --silent --show-error --output /dev/null --retry 8 --retry-all-errors --retry-delay 3 --max-time 8 https://vods.chezbg.one/
+	curl --fail --silent --show-error --max-time 8 https://vods.chezbg.one/api/health | grep -Fq 'Server is running'

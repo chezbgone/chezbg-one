@@ -13,7 +13,7 @@ rainbgone.chezbg.one {
 	reverse_proxy rainbgone-frontend:3000
 }
 
-vodder-view.chezbg.one {
+vods.chezbg.one {
 	import site_defaults
 	reverse_proxy vodder-view-frontend:80
 }

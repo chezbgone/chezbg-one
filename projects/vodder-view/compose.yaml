@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     command: ["-env", "/app/.env"]
     environment:
-      ADMIN_ORIGIN: https://vodder-view.chezbg.one
+      ADMIN_ORIGIN: https://vods.chezbg.one
       DATABASE_PATH: /data/vodder-view.sqlite
     networks:
       appnet:
