@@ -1,80 +1,71 @@
 # chezbg-one
 
 Build and deployment configuration for apps under `*.chezbg.one` on one ARM64
-server. GitHub Actions builds Rainbgone and Vodder View from their app repositories
-and publishes the images to GHCR. The server runs those images with Docker Compose
-and routes requests through Caddy.
+server. GitHub Actions builds each app from its source repository and publishes
+the images to GHCR. The server runs those images with Docker Compose and routes
+requests through Caddy.
 
-## Build a release
+## Deploy an app update
 
-Push the app version you want to build to GitHub. In this repo's **Actions** tab,
-select the app's workflow and choose **Run workflow** on the hosting repo's
-`main` branch. Leave `source_ref` at `main` to build the app's main branch, or
-enter a tag or full commit SHA from the app repo. Builds triggered by a push to
-the hosting repo also use the app's `main` branch.
+1. Push your changes to `main` in the app's GitHub repo.
+2. In `chezbg-one`, open **Actions** and select the app's build workflow. Choose
+   **Run workflow**, select `main` as the workflow branch, and leave `source_ref`
+   set to `main` to build the app's `main` branch.
+3. Wait for the workflow to succeed. The run summary shows the app commit it built.
+4. On the server, run `make update` from the `chezbg-one` checkout.
 
-For a private source repo, set the listed Actions secret to a token with read
-access to that repo.
+`make update` requires Python 3. It updates each app already deployed from this
+repo that has a newer successful `main` build. To deploy an app for the first
+time, update only one app, or use a build from another source ref, see
+[Deploy a specific release](#deploy-a-specific-release).
 
-| App | Workflow | Private source secret |
-| --- | --- | --- |
-| Rainbgone | **Build Rainbgone** | `RAINBGONE_SOURCE_TOKEN` |
-| Vodder View | **Build Vodder View** | `VODDER_VIEW_SOURCE_TOKEN` |
+### Build options
+
+To build a specific revision, set `source_ref` to a branch, tag, or full commit
+SHA from the app repo when running the workflow. Builds triggered by a push to
+the hosting repo use the app's `main` branch.
+
+For a private source repo, set the Actions secret referenced in the app's build
+workflow to a token with read access to the source repo. [Build workflows](.github/workflows)
 
 Each workflow publishes both images under a tag based on the run ID and attempt.
-The successful run's summary shows the exact app commit and the deploy command.
+The successful run's summary gives the deploy command for that tag. The updater
+reads the public `chezbg-one` workflow runs without a GitHub token and uses the
+source ref recorded in each run name to identify `main` builds.
 
 ## Set up the server
 
-- Point the app's hostname (`rainbgone.chezbg.one` or `vods.chezbg.one`),
-  or a wildcard DNS record, at the server's public address. Allow inbound TCP
-  80 and 443 so Caddy can obtain certificates.
-  UDP 443 is optional for HTTP/3.
+- Find the app's hostname in the Caddy configuration. Point that hostname or a
+  wildcard DNS record at the server's public address. Allow inbound TCP 80 and 443
+  so Caddy can obtain certificates. UDP 443 is optional for HTTP/3.
+  [Caddy configuration](caddy/Caddyfile)
 - Install Docker with Compose, `make`, and `curl`. Check out this repo on the
   server. For private GHCR packages, log in to `ghcr.io` with read access to
   the packages before deploying.
-- Copy `secrets/rainbgone.env.example` to `secrets/rainbgone.env` and fill in the
-  Pirate Weather key. Give `secrets/` mode `0700` to protect it on the host and
-  keep the file readable by the backend container's non-root user (mode `0644`).
-- Copy `secrets/vodder-view.env.example` to `secrets/vodder-view.env` and fill in the
-  HenrikDev and Twitch credentials. Set `ADMIN_PASSWORD` to enable the roster
-  editor at `/admin/players`. A fresh database starts with an empty roster.
-  Confirm each player's consent before adding them through the roster editor.
+- Copy `secrets/<app>.env.example` to `secrets/<app>.env` and fill in the app's
+  credentials. See the app's own docs for configuration details. Give `secrets/`
+  mode `0700` to protect it on the host and keep the file readable by the
+  backend container's non-root user (mode `0644`).
+- Run `make proxy` on initial setup and whenever you change the Caddyfile or
+  proxy image.
 
-## Deploy and roll back
+## Deploy a specific release
 
-Run `make proxy` on initial setup, or when changing the Caddyfile or proxy image.
-Then run the command from the build summary, such as
-`make vodder-view RELEASE=123456789-1`. The deploy pulls both images before
-replacing either container, waits for the frontend to reach the backend, and
-checks the public HTTPS route. To roll back, run the same command with the last
-working release tag. Keep those image tags in GHCR.
+On the server, run the deploy command from the successful workflow's summary
+in the `chezbg-one` checkout. The deploy pulls the app's images before replacing
+its containers, waits for the app to pass its health checks, and checks the
+public HTTPS route. After an app's first deploy, `make update` can update it.
 
-To check both apps for updates on EC2, run `make update` from this checkout with
-Python 3 installed. It looks up the latest successful build from each app's `main` branch
-and deploys it if the app has an older release. It checks the tags on both
-containers and uses the same deploy commands as a manual update. Deploy a new app
-once with its command from the build summary to include it in `make update`.
-
-The updater needs a successful workflow run that records the app ref in the run
-name. Push the updated workflows to `main` to start those builds. Later, you can
-start a fresh build by running the app's workflow with `source_ref` set to `main`.
-The updater reads the public `chezbg-one` workflow runs without a GitHub token.
+To roll back, run the same command with the last working release tag. Keep those
+image tags in GHCR.
 
 After updating an app's credentials, redeploy its current release. Each deploy
 recreates the app's containers so the backend reads the updated secrets file.
 Expect a brief interruption during recreation.
 
-Vodder View keeps its roster and match history in the `vodder-view_data` volume.
-Keep that volume across deploys. For a backup, stop the backend and copy the
-entire data directory, including any SQLite sidecar files.
-
-If migrating Rainbgone from the previous setup, first build a release and copy the old
-Rainbgone backend `.env` to `secrets/rainbgone.env` with the permissions above.
-Run the new commands from the existing proxy checkout so Compose reuses Caddy's
-data volume and removes the old socket proxy. Run `make proxy` followed by the
-app deploy. Expect a brief interruption while the proxy and app are replaced.
-The old Cloudflare token and proxy `.env` are no longer used.
+Keep app data volumes across deploys. For backups, find the data volume in the
+app's production Compose file at `projects/<app>/compose.yaml` and follow the
+app's backup instructions.
 
 ## Add another app
 
