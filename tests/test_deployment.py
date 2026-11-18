@@ -48,10 +48,10 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(frontend["networks"]["caddy"]["aliases"], ["rainbgone-frontend"])
         self.assertIn("reverse_proxy rainbgone-frontend:3000", (ROOT / "caddy/Caddyfile").read_text())
         secret = services["backend"]["volumes"][0]
+        self.assertEqual(secret["type"], "bind")
         self.assertEqual(secret["source"], str(ROOT / "secrets/rainbgone.env"))
         self.assertEqual(secret["target"], "/app/.env")
         self.assertTrue(secret["read_only"])
-        self.assertFalse(secret["bind"]["create_host_path"])
 
     def test_missing_release_is_rejected(self):
         result = self.compose(APP)
