@@ -1,97 +1,56 @@
 # chezbg-one
 
-Shared ingress for everything hosted under `*.chezbg.one` on a single host,
-plus the per-project deployment overlays. Each app lives in its own repo and
-stays deployment-agnostic; this repo owns hostnames, TLS, and routing.
+Build and deployment configuration for apps under `*.chezbg.one` on one ARM64
+server. GitHub Actions builds Rainbgone from a pinned source commit and publishes
+its images to GHCR. The server runs those images with Docker Compose and routes
+requests through Caddy. The app repo supplies source and dependency lockfiles.
 
-## Layout
+## Build a release
 
-    compose.yaml            # shared Caddy proxy + restricted Docker socket proxy
-    Dockerfile              # builds Caddy w/ cloudflare DNS + docker-proxy plugins
-    .github/workflows/      # CI builds the proxy image (arm64) + pushes to GHCR
-    .env                    # CLOUDFLARE_API_KEY + ACME_EMAIL (gitignored; copy from .env.example)
-    Makefile                # one target per project
-    projects/
-      rainbgone.yaml        # deployment overlay (host, TLS, routing)
-      rainbgone.env         # DOMAIN=...
+Make sure the Rainbgone source commit is available on GitHub, then update the pin
+in `.github/workflows/build.yml` and push to `main`. Run **Build Rainbgone**
+manually on `main` to rebuild the current pin.
+For a private source repo, set `RAINBGONE_SOURCE_TOKEN` in this repo's Actions
+secrets to a token with read access to the source. The workflow publishes both
+images under a tag based on the run ID and attempt and prints the deploy command
+in the successful run's summary.
 
-The rainbgone app repo is expected as a sibling of this one (`../rainbgone`);
-override with `make rainbgone APPS=/path/to/apps`.
+## Set up the server
 
-## One-time setup
+- Point `rainbgone.chezbg.one` or a wildcard DNS record at the server's public
+  address. Allow inbound TCP 80 and 443 so Caddy can obtain certificates.
+  UDP 443 is optional for HTTP/3.
+- Install Docker with Compose, `make`, and `curl`. Check out this repo on the
+  server. For private GHCR packages, log in to `ghcr.io` with read access to
+  the packages before deploying.
+- Copy `secrets/rainbgone.env.example` to `secrets/rainbgone.env` and fill in the
+  Pirate Weather key. Give `secrets/` mode `0700` to protect it on the host and
+  keep the file readable by the backend container's non-root user (mode `0644`).
 
-1. `cp .env.example .env`, then fill in both values (the file is gitignored, so
-   neither lands in the repo):
-   - `CLOUDFLARE_API_KEY` — a Cloudflare API **token** with both **Zone → DNS → Edit**
-     and **Zone → Zone → Read**, scoped to the `chezbg.one` zone. The DNS provider
-     needs zone read access to find the zone before creating challenge records.
-     This token is shared by every project's DNS-01 challenge.
-   - `ACME_EMAIL` — your Let's Encrypt contact address for renewal-failure notices.
-2. Point DNS at the host's Elastic IP — a wildcard is simplest:
-   `*.chezbg.one  A  <elastic-ip>` (set it DNS-only / grey-cloud, not proxied).
+## Deploy and roll back
 
-## Usage
+Run `make proxy` on initial setup, or when changing the Caddyfile or proxy image.
+Then run the command from the build summary, for example
+`make rainbgone RELEASE=123456789-1`. The deploy pulls both images before
+replacing either container, waits for the frontend to reach the backend, and
+checks the public HTTPS route. To roll back, run the same command with the last
+working release tag. Keep those image tags in GHCR.
 
-    make proxy          # create the `caddy` network + start the proxy (idempotent)
-    make rainbgone      # pull the latest app images + deploy rainbgone
+If replacing the previous setup, first build a release and copy the old
+Rainbgone backend `.env` to `secrets/rainbgone.env` with the permissions above.
+Run the new commands from the existing proxy checkout so Compose reuses Caddy's
+data volume and removes the old socket proxy. Run `make proxy` followed by the
+app deploy. Expect a brief interruption while the proxy and app are replaced.
+The old Cloudflare token and proxy `.env` are no longer used.
 
-Start or update the proxy before deploying apps. The Cloudflare token is passed
-only to Caddy's environment; app labels use the literal runtime placeholder
-`cloudflare {env.CLOUDFLARE_API_KEY}`. After changing the token in `.env`, run
-`make proxy` to recreate Caddy with the new value. App deployment commands load
-only their per-project domain file.
-Compose rejects missing or empty proxy credentials, contact email, or app domain
-before starting services. `make proxy` also validates before creating its network.
+## Add another app
 
-## Adding a project
+Add its build recipe and production Compose file under `projects/<app>/` and
+build its images from a pinned source revision in Actions. Attach only its
+public-facing HTTP service to the shared `caddy` network, using a unique network
+alias. Add the hostname and upstream alias to `caddy/Caddyfile`, then reload
+with `make proxy`. Keep other services on the app's own network.
 
-1. In the app repo, add a clean `compose.prod.yaml` (build + run only — no host
-   ports, no Caddy labels, no domain).
-2. Here, add `projects/<name>.yaml` (overlay) and `projects/<name>.env` (DOMAIN).
-   In the overlay, expose only the public-facing service: put it on the `caddy`
-   network, `caddy.import: common`, `caddy.tls.dns: cloudflare {env.CLOUDFLARE_API_KEY}`,
-   and `caddy.reverse_proxy`. Keep the runtime placeholder literal so the token
-   stays out of application labels.
-   If a service also needs to reach siblings, re-list its private (`appnet`) network too
-   (setting `networks:` replaces, not appends).
-3. Add a `make <name>` target mirroring the others.
-   Use `${DOMAIN:?Set DOMAIN in the project environment file}` for the hostname
-   label so an unset or empty domain fails before deployment.
-
-Distinct subdomains are the only thing you have to keep unique now — no host
-ports are published by any project, so they never collide.
-
-## Docker API access
-
-Caddy discovers containers through `docker-socket-proxy`, which allows only
-read requests for containers, networks, events, daemon information, ping, and
-version negotiation. Docker API writes and other endpoint groups are denied.
-Only the socket proxy mounts the host Docker socket. Its API is on a private,
-internal network shared with Caddy, with no published port or application access.
-This configuration supports standalone Docker Compose, rather than Docker Swarm.
-
-Run the configuration regression checks with Docker Compose installed; the
-checks use temporary files and dummy credentials and do not require a daemon:
-
-    python3 -m unittest discover -s tests -v
-
-Set `COMPOSE_COMMAND=/path/to/docker-compose` to use a standalone Compose CLI.
-
-## Proxy image
-
-The Caddy proxy is **not** built on the host — compiling it with `xcaddy`
-exhausts a nano instance's memory. Instead, GitHub Actions builds it natively on
-an arm64 runner and pushes to `ghcr.io/chezbgone/chezbg-one:latest`
-(public package). `make proxy` just pulls and runs it.
-
-Caddy and both plugins are pinned to explicit versions in the `Dockerfile`.
-Review and update those versions together when upgrading the proxy.
-
-Every push to `main` checks, builds, and publishes the proxy image;
-trigger a manual rebuild from the Actions tab (`workflow_dispatch`). To pick up a
-new image on the host: `make proxy`.
-
-CI checks the deployment configuration before building. Concurrent runs on the
-same ref cancel older runs. Images are first published with their commit SHA;
-only a build that still matches the head of `main` is promoted to `latest`.
-Pull requests run validation without publishing images.
+Run `python3 -m unittest discover -s tests -v` to check the Compose files.
+The tests work without a Docker daemon. Set `COMPOSE_COMMAND` to the standalone
+Compose binary if needed.

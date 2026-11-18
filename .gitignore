@@ -1,3 +1,4 @@
-# Secret — never commit. projects/*.env hold only domains and are fine to commit.
+# Local credentials
 /.env
+/secrets/*.env
 __pycache__/

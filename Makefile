@@ -1,28 +1,16 @@
-# chezbg-one — shared ingress proxy + per-project deployment overlays.
-#
-# APPS points at the directory where your app repos are checked out,
-# relative to this file. Override on the CLI if they live elsewhere:
-#   make rainbgone APPS=/srv/apps
-APPS ?= ..
-
 .PHONY: proxy rainbgone
 
-# Bring up (or update) the shared Caddy proxy. Safe to re-run.
-# Image is built in CI and pulled from GHCR (see .github/workflows/build.yml),
-# so the host never compiles Caddy locally.
-proxy:
-	docker compose config --quiet
-	docker network create --ipv6 caddy 2>/dev/null || true
-	docker compose pull
-	docker compose up -d
+# Compose uses this tag for both app images.
+export RELEASE
 
-# Each app target layers the app's clean prod base (FIRST, so relative
-# build paths resolve against the app repo) with this repo's overlay,
-# and injects the per-project domain (projects/*.env). Only the shared proxy
-# needs the global secret in .env.
+proxy:
+	docker network inspect caddy >/dev/null 2>&1 || docker network create --ipv6 caddy
+	docker compose -f compose.yaml pull
+	docker compose -f compose.yaml up --wait --wait-timeout 60 --remove-orphans
+	docker compose -f compose.yaml exec -T caddy-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+
 rainbgone:
-	docker compose \
-	  -f $(APPS)/rainbgone/compose.prod.yaml \
-	  -f projects/rainbgone.yaml \
-	  --env-file projects/rainbgone.env \
-	  -p rainbgone up -d --pull always
+	test -f secrets/rainbgone.env || (echo 'Create secrets/rainbgone.env from its example.' >&2; exit 1)
+	docker compose -f projects/rainbgone/compose.yaml pull
+	docker compose -f projects/rainbgone/compose.yaml up --pull never --wait --wait-timeout 60
+	curl --fail --silent --show-error --output /dev/null --retry 8 --retry-all-errors --retry-delay 3 --max-time 8 https://rainbgone.chezbg.one/

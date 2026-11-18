@@ -1,0 +1,48 @@
+name: rainbgone
+
+services:
+  backend:
+    image: ghcr.io/chezbgone/chezbg-one/rainbgone-backend:${RELEASE:?Set RELEASE to a Rainbgone build tag}
+    restart: unless-stopped
+    networks: [appnet]
+    volumes:
+      - type: bind
+        source: ../../secrets/rainbgone.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+
+  frontend:
+    image: ghcr.io/chezbgone/chezbg-one/rainbgone-frontend:${RELEASE:?Set RELEASE to a Rainbgone build tag}
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      API_PROXY_TARGET: http://backend:8080
+      ORIGIN: https://rainbgone.chezbg.one
+      PUBLIC_LIBREWXR_BASE_URL: https://api.librewxr.net
+    networks:
+      appnet: {}
+      caddy:
+        aliases: [rainbgone-frontend]
+    healthcheck:
+      # Missing coordinates exercise the frontend proxy and backend without a weather API call.
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:3000/api/forecast').then(async response => {
+            if (response.status !== 400 || !(await response.text()).startsWith('Invalid latitude:'))
+              process.exitCode = 1;
+          }).catch(() => { process.exitCode = 1; })
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+networks:
+  appnet: {}
+  caddy:
+    external: true
+    name: caddy
