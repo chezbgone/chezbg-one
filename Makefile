@@ -13,7 +13,7 @@ rainbgone:
 	test -f secrets/rainbgone.env || (echo 'Create secrets/rainbgone.env from its example.' >&2; exit 1)
 	docker compose -f projects/rainbgone/compose.yaml pull
 	docker compose -f projects/rainbgone/compose.yaml up --pull never --wait --wait-timeout 60
-	curl --fail --silent --show-error --output /dev/null --retry 8 --retry-all-errors --retry-delay 3 --max-time 8 https://rainbgone.chezbg.one/
+	curl --fail --location --silent --show-error --output /dev/null --retry 8 --retry-all-errors --retry-delay 3 --max-time 25 https://rainbgone.chezbg.one/
 
 vodder-view:
 	test -f secrets/vodder-view.env || (echo 'Create secrets/vodder-view.env from its example.' >&2; exit 1)

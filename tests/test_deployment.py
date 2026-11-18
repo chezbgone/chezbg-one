@@ -1,4 +1,4 @@
-"""Render production Compose files without a daemon or real credentials."""
+"""Check production deployment configuration without a daemon or credentials."""
 
 import json
 import os
@@ -14,6 +14,23 @@ VODDER_VIEW = "projects/vodder-view/compose.yaml"
 
 
 class DeploymentTests(unittest.TestCase):
+    def deploy_commands(self, app):
+        result = subprocess.run(
+            ["make", "--dry-run", "--no-print-directory", app, "RELEASE=12345-1"],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return [shlex.split(line) for line in result.stdout.splitlines()]
+
+    def test_rainbgone_deploy_checks_forecast_page_after_redirect(self):
+        curl = next(command for command in self.deploy_commands("rainbgone") if command[0] == "curl")
+        self.assertIn("--location", curl)
+        self.assertIn("--fail", curl)
+        self.assertGreater(int(curl[curl.index("--max-time") + 1]), 20)
+
     def compose(self, file, release=""):
         command = shlex.split(os.environ.get("COMPOSE_COMMAND", "docker compose"))
         return subprocess.run(
