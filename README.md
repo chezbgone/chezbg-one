@@ -46,6 +46,10 @@ replacing either container, waits for the frontend to reach the backend, and
 checks the public HTTPS route. To roll back, run the same command with the last
 working release tag. Keep those image tags in GHCR.
 
+After updating an app's credentials, redeploy its current release. Each deploy
+recreates the app's containers so the backend reads the updated secrets file.
+Expect a brief interruption during recreation.
+
 Vodder View keeps its roster and match history in the `vodder-view_data` volume.
 Keep that volume across deploys. For a backup, stop the backend and copy the
 entire data directory, including any SQLite sidecar files.

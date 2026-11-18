@@ -31,6 +31,17 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn("--fail", curl)
         self.assertGreater(int(curl[curl.index("--max-time") + 1]), 20)
 
+    def test_redeploy_recreates_app_containers_after_pulling_images(self):
+        for app in ("rainbgone", "vodder-view"):
+            with self.subTest(app=app):
+                commands = self.deploy_commands(app)
+                compose = ["docker", "compose", "-f", f"projects/{app}/compose.yaml"]
+                pull = [*compose, "pull"]
+                up = next(command for command in commands if command[:5] == [*compose, "up"])
+                self.assertIn("--force-recreate", up)
+                self.assertIn("--wait", up)
+                self.assertLess(commands.index(pull), commands.index(up))
+
     def compose(self, file, release=""):
         command = shlex.split(os.environ.get("COMPOSE_COMMAND", "docker compose"))
         return subprocess.run(
