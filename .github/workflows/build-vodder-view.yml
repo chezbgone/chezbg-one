@@ -7,6 +7,11 @@ on:
       - .github/workflows/build-vodder-view.yml
       - projects/vodder-view/**
   workflow_dispatch:
+    inputs:
+      source_ref:
+        description: App branch, tag, or full commit SHA
+        type: string
+        default: main
 
 env:
   IMAGE_PREFIX: ghcr.io/${{ github.repository }}/vodder-view
@@ -29,7 +34,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: chezbgone/vodder-view
-          ref: 028f7378c22a3608277f910805ad6bb709d4c073
+          ref: ${{ inputs.source_ref || 'main' }}
           path: source/vodder-view
           token: ${{ secrets.VODDER_VIEW_SOURCE_TOKEN || github.token }}
           persist-credentials: false
@@ -63,6 +68,8 @@ jobs:
           cache-from: type=gha,scope=vodder-view-frontend
           cache-to: type=gha,mode=max,scope=vodder-view-frontend
 
-      - name: Show deploy command
+      - name: Summarize release
         run: |
-          printf '`make vodder-view RELEASE=%s`\n' "$RELEASE" >> "$GITHUB_STEP_SUMMARY"
+          source_commit=$(git -C source/vodder-view rev-parse HEAD)
+          printf 'Source commit: `%s`\n\nDeploy with `make vodder-view RELEASE=%s`\n' \
+            "$source_commit" "$RELEASE" >> "$GITHUB_STEP_SUMMARY"

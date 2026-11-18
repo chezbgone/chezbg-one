@@ -1,24 +1,28 @@
 # chezbg-one
 
 Build and deployment configuration for apps under `*.chezbg.one` on one ARM64
-server. GitHub Actions builds Rainbgone and Vodder View from pinned source commits
-and publishes their images to GHCR. The server runs those images with Docker
-Compose and routes requests through Caddy.
+server. GitHub Actions builds Rainbgone and Vodder View from their app repositories
+and publishes the images to GHCR. The server runs those images with Docker Compose
+and routes requests through Caddy.
 
 ## Build a release
 
-Make sure the app's source commit is available on GitHub, then update its pin
-and push the hosting repo to `main`. Run the app's workflow manually on `main`
-to rebuild the current pin. For a private source repo, set the listed Actions
-secret to a token with read access to that repo.
+Push the app version you want to build to GitHub. In this repo's **Actions** tab,
+select the app's workflow and choose **Run workflow** on the hosting repo's
+`main` branch. Leave `source_ref` at `main` to build the app's main branch, or
+enter a tag or full commit SHA from the app repo. Builds triggered by a push to
+the hosting repo also use the app's `main` branch.
 
-| App | Workflow | Pin location | Private source secret |
-| --- | --- | --- | --- |
-| Rainbgone | **Build Rainbgone** | `.github/workflows/build.yml` | `RAINBGONE_SOURCE_TOKEN` |
-| Vodder View | **Build Vodder View** | `.github/workflows/build-vodder-view.yml` | `VODDER_VIEW_SOURCE_TOKEN` |
+For a private source repo, set the listed Actions secret to a token with read
+access to that repo.
+
+| App | Workflow | Private source secret |
+| --- | --- | --- |
+| Rainbgone | **Build Rainbgone** | `RAINBGONE_SOURCE_TOKEN` |
+| Vodder View | **Build Vodder View** | `VODDER_VIEW_SOURCE_TOKEN` |
 
 Each workflow publishes both images under a tag based on the run ID and attempt.
-The successful run's summary gives the deploy command.
+The successful run's summary shows the exact app commit and the deploy command.
 
 ## Set up the server
 
@@ -64,7 +68,7 @@ The old Cloudflare token and proxy `.env` are no longer used.
 ## Add another app
 
 Add its build recipe and production Compose file under `projects/<app>/` and
-build its images from a pinned source revision in Actions. Attach only its
+build its images from a selectable source revision in Actions. Attach only its
 public-facing HTTP service to the shared `caddy` network, using a unique network
 alias. Add the hostname and upstream alias to `caddy/Caddyfile`, then reload
 with `make proxy`. Keep other services on the app's own network.
