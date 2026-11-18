@@ -1,0 +1,68 @@
+name: Build Vodder View
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/build-vodder-view.yml
+      - projects/vodder-view/**
+  workflow_dispatch:
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}/vodder-view
+  RELEASE: ${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -v
+
+      - name: Check out Vodder View source
+        uses: actions/checkout@v7
+        with:
+          repository: chezbgone/vodder-view
+          ref: 96784e04d74c4575deb1b8bcb22a3d4df6d73d2c
+          path: source/vodder-view
+          token: ${{ secrets.VODDER_VIEW_SOURCE_TOKEN || github.token }}
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish the backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: source/vodder-view/server
+          file: source/vodder-view/server/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-backend:${{ env.RELEASE }}
+          cache-from: type=gha,scope=vodder-view-backend
+          cache-to: type=gha,mode=max,scope=vodder-view-backend
+
+      - name: Publish the frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: source/vodder-view/frontend
+          file: source/vodder-view/frontend/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}-frontend:${{ env.RELEASE }}
+          cache-from: type=gha,scope=vodder-view-frontend
+          cache-to: type=gha,mode=max,scope=vodder-view-frontend
+
+      - name: Show deploy command
+        run: |
+          printf '`make vodder-view RELEASE=%s`\n' "$RELEASE" >> "$GITHUB_STEP_SUMMARY"

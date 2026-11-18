@@ -1,0 +1,45 @@
+name: vodder-view
+
+services:
+  backend:
+    image: ghcr.io/chezbgone/chezbg-one/vodder-view-backend:${RELEASE:?Set RELEASE to a Vodder View build tag}
+    restart: unless-stopped
+    command: ["-env", "/app/.env"]
+    environment:
+      ADMIN_ORIGIN: https://vodder-view.chezbg.one
+      DATABASE_PATH: /data/vodder-view.sqlite
+    networks:
+      appnet:
+        aliases: [vodderview-backend]
+    volumes:
+      - type: bind
+        source: ../../secrets/vodder-view.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      - data:/data
+
+  frontend:
+    image: ghcr.io/chezbgone/chezbg-one/vodder-view-frontend:${RELEASE:?Set RELEASE to a Vodder View build tag}
+    restart: unless-stopped
+    depends_on: [backend]
+    networks:
+      appnet: {}
+      caddy:
+        aliases: [vodder-view-frontend]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/api/health | grep -Fq 'Server is running'"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+networks:
+  appnet: {}
+  caddy:
+    external: true
+    name: caddy
+
+volumes:
+  data: {}

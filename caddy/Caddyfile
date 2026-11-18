@@ -1,4 +1,4 @@
-rainbgone.chezbg.one {
+(site_defaults) {
 	encode zstd gzip
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
@@ -6,5 +6,14 @@ rainbgone.chezbg.one {
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
 	}
+}
+
+rainbgone.chezbg.one {
+	import site_defaults
 	reverse_proxy rainbgone-frontend:3000
+}
+
+vodder-view.chezbg.one {
+	import site_defaults
+	reverse_proxy vodder-view-frontend:80
 }

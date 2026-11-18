@@ -10,6 +10,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 APP = "projects/rainbgone/compose.yaml"
+VODDER_VIEW = "projects/vodder-view/compose.yaml"
 
 
 class DeploymentTests(unittest.TestCase):
@@ -53,7 +54,38 @@ class DeploymentTests(unittest.TestCase):
         self.assertEqual(secret["target"], "/app/.env")
         self.assertTrue(secret["read_only"])
 
+    def test_vodder_view_routes_through_frontend_and_preserves_history(self):
+        stack = self.render(VODDER_VIEW, "12345-1")
+        services = stack["services"]
+        for role, service in services.items():
+            self.assertEqual(
+                service["image"], f"ghcr.io/chezbgone/chezbg-one/vodder-view-{role}:12345-1"
+            )
+            self.assertFalse(service.get("ports"))
+            self.assertNotIn("build", service)
+
+        backend, frontend = services["backend"], services["frontend"]
+        self.assertEqual(set(backend["networks"]), {"appnet"})
+        self.assertEqual(backend["networks"]["appnet"]["aliases"], ["vodderview-backend"])
+        self.assertEqual(frontend["networks"]["caddy"]["aliases"], ["vodder-view-frontend"])
+        self.assertIn("reverse_proxy vodder-view-frontend:80", (ROOT / "caddy/Caddyfile").read_text())
+        self.assertIn("/api/health", frontend["healthcheck"]["test"][-1])
+        self.assertEqual(backend["environment"]["ADMIN_ORIGIN"], "https://vodder-view.chezbg.one")
+        self.assertEqual(backend["environment"]["DATABASE_PATH"], "/data/vodder-view.sqlite")
+
+        mounts = {volume["target"]: volume for volume in backend["volumes"]}
+        secret = mounts["/app/.env"]
+        self.assertEqual(backend["command"], ["-env", "/app/.env"])
+        self.assertEqual(secret["type"], "bind")
+        self.assertEqual(secret["source"], str(ROOT / "secrets/vodder-view.env"))
+        self.assertTrue(secret["read_only"])
+        self.assertEqual(mounts["/data"]["type"], "volume")
+        self.assertEqual(mounts["/data"]["source"], "data")
+        self.assertEqual(stack["volumes"]["data"]["name"], "vodder-view_data")
+
     def test_missing_release_is_rejected(self):
-        result = self.compose(APP)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Set RELEASE", result.stderr)
+        for app in (APP, VODDER_VIEW):
+            with self.subTest(app=app):
+                result = self.compose(app)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Set RELEASE", result.stderr)
