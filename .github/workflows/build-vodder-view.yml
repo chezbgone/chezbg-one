@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: chezbgone/vodder-view
-          ref: 96784e04d74c4575deb1b8bcb22a3d4df6d73d2c
+          ref: 028f7378c22a3608277f910805ad6bb709d4c073
           path: source/vodder-view
           token: ${{ secrets.VODDER_VIEW_SOURCE_TOKEN || github.token }}
           persist-credentials: false

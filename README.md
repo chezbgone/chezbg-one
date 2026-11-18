@@ -34,8 +34,8 @@ The successful run's summary gives the deploy command.
   keep the file readable by the backend container's non-root user (mode `0644`).
 - Copy `secrets/vodder-view.env.example` to `secrets/vodder-view.env` and fill in the
   HenrikDev and Twitch credentials. Set `ADMIN_PASSWORD` to enable the roster
-  editor at `/admin/players`. A fresh database starts syncing Zander at startup.
-  Confirm his consent before the first deploy.
+  editor at `/admin/players`. A fresh database starts with an empty roster.
+  Confirm each player's consent before adding them through the roster editor.
 
 ## Deploy and roll back
 
