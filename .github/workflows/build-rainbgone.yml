@@ -1,4 +1,5 @@
 name: Build Rainbgone
+run-name: "${{ github.workflow }} from [${{ inputs.source_ref || 'main' }}] on ${{ github.ref }}"
 
 on:
   pull_request:

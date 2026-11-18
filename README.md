@@ -50,6 +50,17 @@ replacing either container, waits for the frontend to reach the backend, and
 checks the public HTTPS route. To roll back, run the same command with the last
 working release tag. Keep those image tags in GHCR.
 
+To check both apps for updates on EC2, run `make update` from this checkout with
+Python 3 installed. It looks up the latest successful build from each app's `main` branch
+and deploys it if the app has an older release. It checks the tags on both
+containers and uses the same deploy commands as a manual update. Deploy a new app
+once with its command from the build summary to include it in `make update`.
+
+The updater needs a successful workflow run that records the app ref in the run
+name. Push the updated workflows to `main` to start those builds. Later, you can
+start a fresh build by running the app's workflow with `source_ref` set to `main`.
+The updater reads the public `chezbg-one` workflow runs without a GitHub token.
+
 After updating an app's credentials, redeploy its current release. Each deploy
 recreates the app's containers so the backend reads the updated secrets file.
 Expect a brief interruption during recreation.

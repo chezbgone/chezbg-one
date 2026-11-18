@@ -1,4 +1,4 @@
-.PHONY: proxy rainbgone vodder-view
+.PHONY: proxy rainbgone vodder-view update
 
 # Compose uses this tag for both app images.
 export RELEASE
@@ -21,3 +21,6 @@ vodder-view:
 	docker compose -f projects/vodder-view/compose.yaml up --pull never --force-recreate --wait --wait-timeout 60
 	curl --fail --silent --show-error --output /dev/null --retry 8 --retry-all-errors --retry-delay 3 --max-time 8 https://vods.chezbg.one/
 	curl --fail --silent --show-error --max-time 8 https://vods.chezbg.one/api/health | grep -Fq 'Server is running'
+
+update:
+	python3 scripts/update.py
