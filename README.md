@@ -8,9 +8,17 @@ requests through Caddy.
 ## Deploy an app update
 
 1. Push your changes to `main` in the app's GitHub repo.
-2. In `chezbg-one`, open **Actions** and select the app's build workflow. Choose
-   **Run workflow**, select `main` as the workflow branch, and leave `source_ref`
-   set to `main` to build the app's `main` branch.
+2. From the `chezbg-one` checkout, run the command for the app you're updating.
+
+   ```bash
+   gh workflow run build-rainbgone.yml --ref main
+   gh workflow run build-vodder-view.yml --ref main
+   ```
+
+   You can also open **Actions** in GitHub, select the app's build workflow,
+   choose **Run workflow**, and select `main` as the workflow branch. Both methods
+   build the app's `main` branch by default.
+
 3. Wait for the workflow to succeed. The run summary shows the app commit it built.
 4. On the server, run `make update` from the `chezbg-one` checkout.
 
@@ -22,8 +30,9 @@ time, update only one app, or use a build from another source ref, see
 ### Build options
 
 To build a specific revision, set `source_ref` to a branch, tag, or full commit
-SHA from the app repo when running the workflow. Builds triggered by a push to
-the hosting repo use the app's `main` branch.
+SHA from the app repo. With the CLI, add `-f source_ref=YOUR_REF` and keep
+`--ref main` so the workflow publishes the images. Builds triggered by a push
+to the hosting repo use the app's `main` branch.
 
 For a private source repo, set the Actions secret referenced in the app's build
 workflow to a token with read access to the source repo. [Build workflows](.github/workflows)
